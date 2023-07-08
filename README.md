@@ -6,8 +6,12 @@ of [DFT-FE](https://github.com/dftfeDevelopers/dftfe).
 
 To use these scripts, we assume you have cloned this
 repository onto a system where you intend to install DFT-FE.
-I installed it into `/lustre/orion/stf006/world-shared/$USER/DFT-FE`,
-for example.
+For example, I installed it into `/lustre/orion/[projid]/scratch/$USER/DFT-FE` after 
+cloning into the scatch directory
+
+    cd /lustre/orion/[projid]/scratch/$USER
+    git clone https://github.com/dsambit/install_DFT-FE.git DFT-FE
+    cd DFT-FE
 
 ## Pre-requisites
 
@@ -36,7 +40,6 @@ This environment file is used both by the install and run
 phases of DFT-FE.
 
 ## Running the installation
-
 The installation itself is contained within the functions in
 `dftfe2.rc`.  Edit this to define its WD and INST directories
 to reflect your own environment.
@@ -53,31 +56,23 @@ For example,
     install_p4est
     install_scalapack
     # install_ofi_rccl # (optional, skip this one for now)
-    install_elpa
+    install_elpa (press `y` when prompted to use patch)
     install_dealii
     compile_dftfe
-    enter_venv
-    install_torch
-    compile_mlxc
 
 Each function follows a standard pattern - download source into `$WD/src`,
 patch, compile, and install into `$INST`.  It is HIGHLY recommended
 to check all warnings and errors from these installs to be sure
 you have not ended up with broken packages.
 
-A few packages require interaction.  The elpa patch seems to have become
-partially out-dated since mid-March, and `compile_mlxc` requires
-appropriate git credentials.
 
 ## Running DFT-FE
 
-Two different versions of DFT-FE are built from the steps above:
-the GPU branch with ROCM and the GPU branch with ROCM and torch-based
-MLXC.  Both are built in real and cplx versions, depending on whether you
+DFT-FE is built in real and cplx versions, depending on whether you
 want to enable k-points (implemented in the cplx version only).
 
 Assuming you have already sourced `env2/env.rc`, an example
-batch script running GPU-enabled DFT-FE is below:
+batch script running GPU-enabled DFT-FE on 280 nodes is below:
 
     #!/usr/bin/env rc
     #SBATCH -A spy007
@@ -93,6 +88,7 @@ batch script running GPU-enabled DFT-FE is below:
     MPICH_OFI_NIC_POLICY = NUMA
     HSA_FORCE_FINE_GRAIN_PCIE = 1 
     LD_LIBRARY_PATH = $LD_LIBRARY_PATH:$WD/env2/lib
+    MPICH_SMP_SINGLE_COPY_MODE=NONE
 
     BASE = $WD/src/dftfe/build/release/real
     n=`{echo $SLURM_JOB_NUM_NODES '*' 8 | bc}
