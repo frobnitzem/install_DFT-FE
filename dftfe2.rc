@@ -258,108 +258,6 @@ fn install_dealii {
   cd $WD
 }
 
-#Finally for installation of publicGithubDevelop branch of DFT-FE use setupUserCrusher.sh as the template. Then do
-fn compile_dftfe {
-  cd $WD/src
-  branch = GB2023
-  if(! test -d dftfe) {
-    git clone -b $branch https://github.com/dftfeDevelopers/dftfe.git
-  } if not {
-    cd dftfe
-    git fetch
-    git checkout $branch
-    git pull
-  }
-  cd dftfe
-  SRC=`{pwd}
-  rm -fr build
-  mkdir build && cd build
-
-  dealiiDir=$INST
-  alglibDir=$INST/lib/alglib
-  libxcDir=$INST
-  spglibDir=$INST
-  xmlIncludeDir=/usr/include/libxml2
-  xmlLibDir=/usr/lib64
-
-  ELPA_PATH=$INST
-  DCCL_PATH=$ROCM_PATH/rccl
-
-  #Compiler options and flags
-  cxx_compiler = CC
-  cxx_flags = '-march=znver3 -fPIC -I'$MPICH_DIR'/include -I'$ROCM_PATH/include
-  cxx_flagsRelease = -O2 #sets DCMAKE_CXX_FLAGS_RELEASE
-  device_flags = '-march=znver3 -O2 -munsafe-fp-atomics -I'$MPICH_DIR'/include -I'$ROCM_PATH/include
-  device_architectures = gfx90a
-
-  # HIGHERQUAD_PSP option compiles with default or higher order
-  # quadrature for storing pseudopotential data
-  # ON is recommended for MD simulations with hard pseudopotentials
-
-  # build type: "Release" or "Debug"
-  build_type=Release
-  out=`{echo $build_type | tr '[:upper:]' '[:lower:]'}
-
-  # Note: MDI_PATH is not used by project.
-  cmake_flags = ( \
-      -DCMAKE_CXX_STANDARD=14 \
-      -DCMAKE_CXX_COMPILER=$cxx_compiler \
-      -DCMAKE_CXX_FLAGS=$cxx_flags \
-      -DCMAKE_CXX_FLAGS_RELEASE=$cxx_flagsRelease \
-      -DCMAKE_BUILD_TYPE=$build_type \
-      -DDEAL_II_DIR=$dealiiDir \
-      -DALGLIB_DIR=$alglibDir \
-      -DLIBXC_DIR=$libxcDir \
-      -DSPGLIB_DIR=$spglibDir \
-      -DXML_LIB_DIR=$xmlLibDir \
-      -DXML_INCLUDE_DIR=$xmlIncludeDir \
-      -DWITH_MDI=OFF \
-      -DMDI_PATH= \
-      -DWITH_DCCL=ON \
-      -DCMAKE_PREFIX_PATH=$ELPA_PATH';'$DCCL_PATH \
-      -DWITH_GPU=ON \
-      -DGPU_LANG=hip \
-      -DGPU_VENDOR=amd \
-      -DWITH_GPU_AWARE_MPI=ON \
-      -DCMAKE_HIP_FLAGS=$device_flags \
-      -DCMAKE_HIP_ARCHITECTURES=$device_architectures \
-      -DWITH_TESTING=OFF \
-      -DMINIMAL_COMPILE=OFF \
-      -DCMAKE_SHARED_LINKER_FLAGS=-L$ROCM_PATH'/lib -lamdhip64 -L'$MPICH_DIR'/lib -lmpi -L'$CRAY_MPICH_ROOTDIR'/gtl/lib -lmpi_gtl_hsa' \
-      -DHIGHERQUAD_PSP=OFF \
-  )
-
-  fn cmake_real {
-    mkdir -p real && cd real
-    cmake $cmake_flags \
-      -DWITH_COMPLEX=OFF \
-      $1  
-    make -j8
-    cd ..
-  }
-
-  fn cmake_cplx {
-    mkdir -p complex && cd complex
-    cmake $cmake_flags \
-      -DWITH_COMPLEX=ON \
-      $1
-    make -j8
-    cd ..
-  }
-
-  mkdir -p $out
-  cd $out
-
-  echo 'Building Real executable in $build_type mode...'
-  cmake_real $SRC
-
-  echo 'Building Complex executable in $build_type mode...'
-  cmake_cplx $SRC
-
-  echo 'Build complete.'
-  cd $WD
-}
-
 fn enter_venv {
   if(! test -d $INST/venv ) {
     python3 -m venv $INST/venv
@@ -408,11 +306,11 @@ fn install_torch {
   cd $WD
 }
 
-fn compile_mlxc {
-  cd /lustre/orion/stf006/scratch/rogersdd/DFT-FE
-  branch = GB2023MLXC
+fn install_dftfe {
+  cd $WD/src
+  branch = publicGithubDevelop
   if(! test -d dftfe) {
-    git clone -b $branch git@bitbucket.org:dftfedevelopers/dftfe.git
+    git clone -b $branch https://github.com/dftfeDevelopers/dftfe.git
   } if not {
     cd dftfe
     git fetch
@@ -420,8 +318,8 @@ fn compile_mlxc {
     git pull
   }
   cd dftfe
-  rm -fr build
   SRC = `{pwd}
+  rm -fr build
   mkdir build && cd build
 
   dealiiDir=$INST
@@ -464,6 +362,7 @@ fn compile_mlxc {
       -DXML_LIB_DIR=$xmlLibDir \
       -DXML_INCLUDE_DIR=$xmlIncludeDir \
       -DWITH_MDI=OFF \
+      -DWITH_TORCH=ON \
       -DMDI_PATH= \
       -DWITH_DCCL=ON \
       -DCMAKE_PREFIX_PATH=$ELPA_PATH';'$DCCL_PATH';'$TORCH_PATH \
@@ -483,8 +382,10 @@ fn compile_mlxc {
     mkdir -p real && cd real
     cmake $cmake_flags \
       -DWITH_COMPLEX=OFF \
+      -DCMAKE_INSTALL_PREFIX=$INST/real \
       $1  
     make -j8
+    make install
     cd ..
   }
 
@@ -492,8 +393,10 @@ fn compile_mlxc {
     mkdir -p complex && cd complex
     cmake $cmake_flags \
       -DWITH_COMPLEX=ON \
+      -DCMAKE_INSTALL_PREFIX=$INST/cplx \
       $1
     make -j8
+    make install
     cd ..
   }
 
@@ -509,5 +412,3 @@ fn compile_mlxc {
   echo 'Build complete.'
   cd $WD
 }
-
-

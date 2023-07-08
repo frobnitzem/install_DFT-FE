@@ -55,10 +55,9 @@ For example,
     # install_ofi_rccl # (optional, skip this one for now)
     install_elpa
     install_dealii
-    compile_dftfe
     enter_venv
     install_torch
-    compile_mlxc
+    install_dftfe
 
 Each function follows a standard pattern - download source into `$WD/src`,
 patch, compile, and install into `$INST`.  It is HIGHLY recommended
@@ -92,13 +91,12 @@ batch script running GPU-enabled DFT-FE is below:
     OMP_NUM_THREADS = 1
     MPICH_OFI_NIC_POLICY = NUMA
     HSA_FORCE_FINE_GRAIN_PCIE = 1 
-    LD_LIBRARY_PATH = $LD_LIBRARY_PATH:$WD/env2/lib
+    LD_LIBRARY_PATH = $LD_LIBRARY_PATH:$INST/lib
 
-    BASE = $WD/src/dftfe/build/release/real
     n=`{echo $SLURM_JOB_NUM_NODES '*' 8 | bc}
 
     srun -n $n -c 7 --gpu-bind closest \
-              $BASE/dftfe parameterFileGPU.prm > output
+              $INST/real/dftfe parameterFileGPU.prm > output
 
 This uses `SLURM_JOB_NUM_NODES` to compute the number of MPI
 ranks to use as one per GCD (8 per node).  If you wish to run
